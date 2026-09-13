@@ -1,0 +1,21 @@
+{
+  "name": "@avgon/open-apa-core",
+  "version": "0.1.0",
+  "description": "Human-governed workflow primitives for agentic operations: state transitions, risk gates, approvals, and append-only audit trails.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "check": "tsc --noEmit"
+  },
+  "keywords": ["agentic", "workflow", "human-in-the-loop", "audit", "approvals", "ai-agents"],
+  "license": "Apache-2.0",
+  "engines": { "node": ">=20" },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
