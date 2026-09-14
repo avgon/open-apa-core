@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { GovernedWorkflow, type AuditStore, type AuditEvent } from "../src/index.js";
+import {
+  GovernedWorkflow,
+  RiskApprovalPolicy,
+  type AuditStore,
+  type AuditEvent,
+} from "../src/index.js";
 
 type State = "received" | "review" | "approved" | "rejected";
 
@@ -43,6 +48,21 @@ describe("GovernedWorkflow", () => {
   it("rejects invalid state transitions", () => {
     const flow = create();
     expect(() => flow.transition("approved", "agent:classifier")).toThrow("not allowed");
+  });
+
+  it("routes high-risk approvals through a deterministic policy", () => {
+    const flow = new GovernedWorkflow<State>({
+      initial: "received",
+      transitions: { received: ["review"], review: ["approved", "rejected"], approved: [], rejected: [] },
+      approvalPolicy: new RiskApprovalPolicy<State>([
+        { id: "manager", minimumRisk: "medium", requiredApprovers: 1 },
+        { id: "controller", minimumRisk: "high", requiredApprovers: 2 },
+      ]),
+    });
+
+    const approval = flow.requestApproval({ id: "approval-1", requestedBy: "agent:reviewer", risk: "high", reason: "bank account changed" });
+    expect(approval.route?.id).toBe("controller");
+    expect(approval.route?.requiredApprovers).toBe(2);
   });
 
   it("prevents approval decisions from being overwritten", () => {
