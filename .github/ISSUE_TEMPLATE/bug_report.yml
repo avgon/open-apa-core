@@ -1,0 +1,21 @@
+name: Bug report
+description: Report a reproducible defect
+body:
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Include the current behavior and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Minimal reproduction
+      description: Paste the smallest code sample that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Environment
+      description: Node version, package version, and operating system.
+    validations:
+      required: true
