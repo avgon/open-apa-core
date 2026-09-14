@@ -1,3 +1,7 @@
+import { InMemoryAuditStore, type AuditStore } from "./audit-store.js";
+
+export { InMemoryAuditStore, type AuditStore } from "./audit-store.js";
+
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 
 export type AuditEvent<TState extends string> = {
@@ -22,15 +26,17 @@ export type Approval = {
 export class GovernedWorkflow<TState extends string> {
   private state: TState;
   private readonly transitions: ReadonlyMap<TState, readonly TState[]>;
-  private readonly events: AuditEvent<TState>[] = [];
+  private readonly auditStore: AuditStore<AuditEvent<TState>>;
   private readonly approvals = new Map<string, Approval>();
 
   constructor(options: {
     initial: TState;
     transitions: Record<TState, readonly TState[]>;
     actor?: string;
+    auditStore?: AuditStore<AuditEvent<TState>>;
   }) {
     this.state = options.initial;
+    this.auditStore = options.auditStore ?? new InMemoryAuditStore<AuditEvent<TState>>();
     this.transitions = new Map(
       Object.entries(options.transitions) as [TState, readonly TState[]][],
     );
@@ -75,7 +81,7 @@ export class GovernedWorkflow<TState extends string> {
   }
 
   audit(): readonly AuditEvent<TState>[] {
-    return [...this.events];
+    return this.auditStore.list();
   }
 
   approval(id: string): Approval | undefined {
@@ -83,7 +89,7 @@ export class GovernedWorkflow<TState extends string> {
   }
 
   private record(event: Omit<AuditEvent<TState>, "id" | "at">): void {
-    this.events.push({
+    this.auditStore.append({
       id: crypto.randomUUID(),
       at: new Date().toISOString(),
       ...event,
