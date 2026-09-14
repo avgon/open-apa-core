@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GovernedWorkflow } from "../src/index.js";
+import { GovernedWorkflow, type AuditStore, type AuditEvent } from "../src/index.js";
 
 type State = "received" | "review" | "approved" | "rejected";
 
@@ -21,6 +21,23 @@ describe("GovernedWorkflow", () => {
 
     expect(flow.current()).toBe("approved");
     expect(flow.audit().map((event) => event.type)).toEqual(["created", "transitioned", "transitioned"]);
+  });
+
+  it("writes events through an injected audit store", () => {
+    const stored: AuditEvent<State>[] = [];
+    const store: AuditStore<AuditEvent<State>> = {
+      append: (event) => stored.push(event),
+      list: () => stored,
+    };
+    const flow = new GovernedWorkflow<State>({
+      initial: "received",
+      transitions: { received: ["review"], review: ["approved", "rejected"], approved: [], rejected: [] },
+      auditStore: store,
+    });
+
+    flow.transition("review", "agent:classifier");
+    expect(stored).toHaveLength(2);
+    expect(flow.audit()).toEqual(stored);
   });
 
   it("rejects invalid state transitions", () => {
