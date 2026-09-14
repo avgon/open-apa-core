@@ -2,7 +2,15 @@ import { InMemoryAuditStore, type AuditStore } from "./audit-store.js";
 import type { ApprovalPolicy, ApprovalRoute } from "./policy.js";
 
 export { InMemoryAuditStore, type AuditStore } from "./audit-store.js";
+export { SqliteAuditStore, type StoredAuditEvent } from "./sqlite-audit-store.js";
 export { RiskApprovalPolicy, type ApprovalPolicy, type ApprovalRoute } from "./policy.js";
+export {
+  createFinancePaymentWorkflow,
+  financeApprovalRoutes,
+  financePaymentTransitions,
+  paymentRisk,
+  type FinancePaymentState,
+} from "./templates/finance-payment.js";
 
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 
