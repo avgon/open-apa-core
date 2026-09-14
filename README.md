@@ -48,9 +48,11 @@ payment.decideApproval("iban-change-1", "human:controller", "approved");
 
 ## Roadmap
 
-- Persisted audit adapters
-- Policy engine and approval routing
-- Workflow templates for finance, procurement, and service operations
+- SQLite audit adapter for durable local workflows
+- Policy engine and risk-based approval routing
+- Finance payment workflow template
+- PostgreSQL and event-stream audit adapters
+- Workflow templates for procurement and service operations
 - OpenTelemetry integration
 - Web dashboard example
 
