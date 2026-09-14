@@ -1,6 +1,6 @@
 {
   "name": "@avgon/open-apa-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Human-governed workflow primitives for agentic operations: state transitions, risk gates, approvals, and append-only audit trails.",
   "type": "module",
   "main": "dist/index.js",
