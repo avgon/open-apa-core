@@ -1,6 +1,8 @@
 import { InMemoryAuditStore, type AuditStore } from "./audit-store.js";
+import type { ApprovalPolicy, ApprovalRoute } from "./policy.js";
 
 export { InMemoryAuditStore, type AuditStore } from "./audit-store.js";
+export { RiskApprovalPolicy, type ApprovalPolicy, type ApprovalRoute } from "./policy.js";
 
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 
@@ -19,6 +21,7 @@ export type Approval = {
   readonly requestedBy: string;
   readonly risk: RiskLevel;
   readonly reason: string;
+  readonly route?: ApprovalRoute;
   readonly decidedBy?: string;
   readonly decision?: "approved" | "rejected";
 };
@@ -27,6 +30,7 @@ export class GovernedWorkflow<TState extends string> {
   private state: TState;
   private readonly transitions: ReadonlyMap<TState, readonly TState[]>;
   private readonly auditStore: AuditStore<AuditEvent<TState>>;
+  private readonly approvalPolicy?: ApprovalPolicy<TState>;
   private readonly approvals = new Map<string, Approval>();
 
   constructor(options: {
@@ -34,9 +38,11 @@ export class GovernedWorkflow<TState extends string> {
     transitions: Record<TState, readonly TState[]>;
     actor?: string;
     auditStore?: AuditStore<AuditEvent<TState>>;
+    approvalPolicy?: ApprovalPolicy<TState>;
   }) {
     this.state = options.initial;
     this.auditStore = options.auditStore ?? new InMemoryAuditStore<AuditEvent<TState>>();
+    this.approvalPolicy = options.approvalPolicy;
     this.transitions = new Map(
       Object.entries(options.transitions) as [TState, readonly TState[]][],
     );
@@ -64,9 +70,18 @@ export class GovernedWorkflow<TState extends string> {
     reason: string;
   }): Approval {
     if (this.approvals.has(input.id)) throw new Error(`Approval ${input.id} already exists`);
-    const approval: Approval = { ...input };
+    const route = this.approvalPolicy?.route({
+      state: this.state,
+      risk: input.risk,
+      reason: input.reason,
+    });
+    const approval: Approval = { ...input, route };
     this.approvals.set(input.id, approval);
-    this.record({ actor: input.requestedBy, type: "approval_requested", detail: `${input.risk}: ${input.reason}` });
+    this.record({
+      actor: input.requestedBy,
+      type: "approval_requested",
+      detail: `${input.risk}: ${input.reason}${route ? ` [${route.id}]` : ""}`,
+    });
     return approval;
   }
 
