@@ -73,4 +73,42 @@ describe("GovernedWorkflow", () => {
     expect(decided.decision).toBe("rejected");
     expect(() => flow.decideApproval("approval-1", "human:controller", "approved")).toThrow("already decided");
   });
+
+  it("blocks transitions when pending approvals exist and gate is enabled", () => {
+    const flow = new GovernedWorkflow<State>({
+      initial: "received",
+      transitions: { received: ["review"], review: ["approved", "rejected"], approved: [], rejected: [] },
+      requireApprovalBeforeTransition: true,
+    });
+
+    flow.transition("review", "agent:classifier");
+    flow.requestApproval({ id: "a-1", requestedBy: "agent:reviewer", risk: "high", reason: "needs human review" });
+
+    expect(() => flow.transition("approved", "agent:auto")).toThrow("pending approval");
+  });
+
+  it("allows transitions once all approvals are decided", () => {
+    const flow = new GovernedWorkflow<State>({
+      initial: "received",
+      transitions: { received: ["review"], review: ["approved", "rejected"], approved: [], rejected: [] },
+      requireApprovalBeforeTransition: true,
+    });
+
+    flow.transition("review", "agent:classifier");
+    flow.requestApproval({ id: "a-1", requestedBy: "agent:reviewer", risk: "high", reason: "needs approval" });
+    flow.decideApproval("a-1", "human:manager", "approved");
+
+    flow.transition("approved", "human:manager", "all clear");
+    expect(flow.current()).toBe("approved");
+  });
+
+  it("does not block transitions when gate is disabled (default)", () => {
+    const flow = create();
+    flow.transition("review", "agent:classifier");
+    flow.requestApproval({ id: "a-1", requestedBy: "agent:reviewer", risk: "medium", reason: "routine" });
+
+    // Default: no gate, transitions allowed even with pending approvals
+    flow.transition("approved", "agent:auto");
+    expect(flow.current()).toBe("approved");
+  });
 });

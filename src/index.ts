@@ -40,6 +40,7 @@ export class GovernedWorkflow<TState extends string> {
   private readonly auditStore: AuditStore<AuditEvent<TState>>;
   private readonly approvalPolicy?: ApprovalPolicy<TState>;
   private readonly approvals = new Map<string, Approval>();
+  private readonly requiresApprovalGate: boolean;
 
   constructor(options: {
     initial: TState;
@@ -47,10 +48,12 @@ export class GovernedWorkflow<TState extends string> {
     actor?: string;
     auditStore?: AuditStore<AuditEvent<TState>>;
     approvalPolicy?: ApprovalPolicy<TState>;
+    requireApprovalBeforeTransition?: boolean;
   }) {
     this.state = options.initial;
     this.auditStore = options.auditStore ?? new InMemoryAuditStore<AuditEvent<TState>>();
     this.approvalPolicy = options.approvalPolicy;
+    this.requiresApprovalGate = options.requireApprovalBeforeTransition ?? false;
     this.transitions = new Map(
       Object.entries(options.transitions) as [TState, readonly TState[]][],
     );
@@ -65,6 +68,16 @@ export class GovernedWorkflow<TState extends string> {
     const allowed = this.transitions.get(this.state) ?? [];
     if (!allowed.includes(to)) {
       throw new Error(`Transition ${this.state} -> ${to} is not allowed`);
+    }
+    // If there are pending (undecided) approvals, block the transition
+    // unless the target state is a rejection/cancellation state.
+    if (this.requiresApprovalGate) {
+      const pending = [...this.approvals.values()].filter(a => !a.decision);
+      if (pending.length > 0) {
+        throw new Error(
+          `Transition ${this.state} -> ${to} is blocked: ${pending.length} pending approval(s) must be decided first`,
+        );
+      }
     }
     const from = this.state;
     this.state = to;
